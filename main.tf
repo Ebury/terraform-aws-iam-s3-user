@@ -4,32 +4,27 @@ locals {
 
 
 data "aws_iam_policy_document" "default" {
-  count = !var.enable_ip_filter && local.enabled ? 1 : 0
+  count = local.enabled ? 1 : 0
 
   statement {
     actions   = var.s3_actions
     resources = var.s3_resources
     effect    = "Allow"
   }
-}
 
-data "aws_iam_policy_document" "ip_filtered" {
-  count = var.enable_ip_filter && local.enabled ? 1 : 0
+  dynamic "condition" {
+    for_each = var.enable_ip_filter ? [1] : []
 
-
-  statement {
-    actions   = var.s3_actions
-    resources = var.s3_resources
-    effect    = "Allow"
-
-    condition {
+    content {
       test     = "IpAddress"
       variable = "aws:SourceIp"
       values   = var.ip_filtered_list
     }
   }
-
 }
+
+
+
 
 module "s3_user" {
   source                        = "cloudposse/iam-system-user/aws"
@@ -50,8 +45,7 @@ resource "aws_iam_user_policy" "default" {
   count = local.enabled ? 1 : 0
   name  = module.s3_user.user_name
   user  = module.s3_user.user_name
-  policy = join("", concat(
-    data.aws_iam_policy_document.ip_filtered.*.json,
+  policy = join("",
     data.aws_iam_policy_document.default.*.json
-  ))
+  )
 }
