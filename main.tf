@@ -10,9 +10,8 @@ data "aws_iam_policy_document" "default" {
     actions   = var.s3_actions
     resources = var.s3_resources
     effect    = "Allow"
-  }
 
-  dynamic "condition" {
+    dynamic "condition" {
     for_each = var.enable_ip_filter ? [1] : []
 
     content {
@@ -20,6 +19,7 @@ data "aws_iam_policy_document" "default" {
       variable = "aws:SourceIp"
       values   = var.ip_filtered_list
     }
+  }
   }
 }
 
