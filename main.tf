@@ -11,7 +11,20 @@ data "aws_iam_policy_document" "default" {
     resources = var.s3_resources
     effect    = "Allow"
   }
+
+  dynamic "condition" {
+    for_each = var.enable_ip_filter ? [1] : []
+
+    content {
+      test     = "IpAddress"
+      variable = "aws:SourceIp"
+      values   = var.ip_filtered_list
+    }
+  }
 }
+
+
+
 
 module "s3_user" {
   source                        = "cloudposse/iam-system-user/aws"
@@ -29,8 +42,10 @@ module "s3_user" {
 
 resource "aws_iam_user_policy" "default" {
   #bridgecrew:skip=BC_AWS_IAM_16:Skipping `Ensure IAM policies are attached only to groups or roles` check because this module intentionally attaches IAM policy directly to a user.
-  count  = local.enabled ? 1 : 0
-  name   = module.s3_user.user_name
-  user   = module.s3_user.user_name
-  policy = join("", data.aws_iam_policy_document.default.*.json)
+  count = local.enabled ? 1 : 0
+  name  = module.s3_user.user_name
+  user  = module.s3_user.user_name
+  policy = join("",
+    data.aws_iam_policy_document.default.*.json
+  )
 }
